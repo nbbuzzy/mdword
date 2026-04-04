@@ -2,15 +2,16 @@ import fs from 'fs-extra';
 import path from 'path';
 
 /**
- * Restore mermaid diagrams from sidecar comments by reading .mmd files
- * and replacing the comment + image reference with the original fence block
+ * Restore mermaid diagrams from image alt text by reading .mmd files
+ * and replacing the image reference with the original fence block
  */
 export async function restoreMermaidDiagrams(
   markdown: string,
   baseDir: string
 ): Promise<string> {
-  // Pattern to match: <!-- mermaid:path/to/diagram.mmd -->\n![...](...)
-  const mermaidPattern = /<!-- mermaid:(.+?\.mmd) -->\s*!\[.*?\]\(.*?\)/g;
+  // Pattern to match: ![path/to/diagram.mmd](image-path)
+  // The alt text contains the .mmd path which survives round-trip through Word
+  const mermaidPattern = /!\[([^[\]]+\.mmd)\]\([^)]+\)/g;
 
   let restoredMarkdown = markdown;
   const matches: Array<{ fullMatch: string; mmdPath: string; offset: number }> = [];
@@ -26,8 +27,9 @@ export async function restoreMermaidDiagrams(
 
   // Process matches in reverse order to maintain correct offsets
   for (const { fullMatch, mmdPath } of matches.reverse()) {
-    // Resolve .mmd path relative to baseDir
-    const resolvedMmdPath = path.resolve(baseDir, mmdPath);
+    // Resolve .mmd path relative to project root (cwd)
+    // Paths in alt text are stored relative to cwd, not to the file location
+    const resolvedMmdPath = path.resolve(process.cwd(), mmdPath);
 
     try {
       // Read the .mmd file

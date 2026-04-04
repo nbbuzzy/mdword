@@ -1,8 +1,9 @@
 import fs from 'fs-extra';
+import path from 'path';
 import chalk from 'chalk';
 import { validateMarkdownInput, validateDocxOutput } from '../utils/validation.js';
 import { resolveTemplate, resolveAssetsDir } from '../utils/path-resolver.js';
-import { createTempFile, cleanup } from '../utils/file-utils.js';
+import { createTempDir, cleanup } from '../utils/file-utils.js';
 import { extractMermaidDiagrams } from '../core/mermaid-extractor.js';
 import { renderMermaidDiagrams } from '../core/mermaid-renderer.js';
 import { runPandoc } from '../core/pandoc-runner.js';
@@ -21,7 +22,7 @@ export async function md2word(
   outputDocx: string,
   options: Md2WordOptions = {}
 ): Promise<void> {
-  let tempMd: string | undefined;
+  let tempDir: string | undefined;
 
   try {
     // 1. Validate inputs
@@ -37,7 +38,11 @@ export async function md2word(
     }
     const templatePath = await resolveTemplate(options.template);
     if (options.verbose) {
-      console.log(chalk.gray(`Using template: ${templatePath}`));
+      if (templatePath) {
+        console.log(chalk.gray(`Using template: ${templatePath}`));
+      } else {
+        console.log(chalk.gray('Using pandoc default styles (no template found)'));
+      }
     }
 
     // 3. Resolve assets directory
@@ -69,21 +74,40 @@ export async function md2word(
       }
     }
 
-    // 6. Create temporary processed markdown file
+    // 6. Create temporary directory and copy images
     if (options.verbose) {
-      console.log(chalk.blue('Creating temporary markdown file...'));
+      console.log(chalk.blue('Preparing temporary workspace...'));
     }
-    tempMd = await createTempFile(processedMarkdown, '.md');
+    tempDir = await createTempDir();
 
-    // 7. Run pandoc conversion
+    // Copy PNG files to temp directory and adjust markdown to use relative paths
+    let finalMarkdown = processedMarkdown;
+    for (const diagram of diagrams) {
+      const pngFilename = path.basename(diagram.pngPath);
+      const tempPngPath = path.join(tempDir, pngFilename);
+
+      // Copy PNG to temp directory
+      await fs.copyFile(diagram.pngPath, tempPngPath);
+
+      // Replace absolute path in markdown with just the filename
+      const absolutePath = path.resolve(diagram.pngPath);
+      finalMarkdown = finalMarkdown.replace(absolutePath, pngFilename);
+    }
+
+    // Write processed markdown to temp directory
+    const tempMdPath = path.join(tempDir, 'input.md');
+    await fs.writeFile(tempMdPath, finalMarkdown, 'utf-8');
+
+    // 7. Run pandoc conversion from temp directory (so it finds images)
     if (options.verbose) {
       console.log(chalk.blue('Running pandoc conversion...'));
     }
     await runPandoc({
-      input: tempMd,
-      output: outputDocx,
+      input: path.basename(tempMdPath),  // Use relative path from temp dir
+      output: path.resolve(outputDocx),  // Use absolute path for output
       referenceDoc: templatePath,
       format: 'docx',
+      cwd: tempDir,  // Run from temp directory
     });
 
     // 8. Success
@@ -92,9 +116,9 @@ export async function md2word(
       console.log(chalk.gray(`  ${diagrams.length} mermaid diagram(s) processed`));
     }
   } finally {
-    // 9. Cleanup temp files
-    if (tempMd) {
-      await cleanup(tempMd);
+    // 9. Cleanup temp directory
+    if (tempDir) {
+      await cleanup(tempDir);
     }
   }
 }

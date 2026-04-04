@@ -6,7 +6,7 @@ import { resolveAssetsDir } from '../utils/path-resolver.js';
 import { createTempFile, cleanup } from '../utils/file-utils.js';
 import { runPandoc } from '../core/pandoc-runner.js';
 import { restoreMermaidDiagrams } from '../core/mermaid-restorer.js';
-import { normalizeMarkdown } from '../core/normalizer.js';
+import { normalizeMarkdown, convertFiguresToMarkdown } from '../core/normalizer.js';
 
 export interface Word2MdOptions {
   assetsDir?: string;
@@ -52,7 +52,6 @@ export async function word2md(
       input: inputDocx,
       output: tempMd,
       format: 'markdown',
-      extraArgs: ['--atx-headers', '--wrap=none'],
     });
 
     // 5. Read raw markdown
@@ -61,14 +60,20 @@ export async function word2md(
     }
     let rawMarkdown = await fs.readFile(tempMd, 'utf-8');
 
-    // 6. Restore mermaid diagrams from comments
+    // 6. Pre-process: Convert HTML figures to markdown images (must happen before mermaid restoration)
+    if (options.verbose) {
+      console.log(chalk.blue('Converting HTML figures to markdown...'));
+    }
+    rawMarkdown = convertFiguresToMarkdown(rawMarkdown);
+
+    // 7. Restore mermaid diagrams from image alt text
     if (options.verbose) {
       console.log(chalk.blue('Restoring mermaid diagrams...'));
     }
     const baseDir = path.dirname(path.resolve(outputMd));
     const restoredMarkdown = await restoreMermaidDiagrams(rawMarkdown, baseDir);
 
-    // 7. Normalize output (unless disabled)
+    // 8. Normalize output (unless disabled)
     let finalMarkdown = restoredMarkdown;
     if (!options.noNormalize) {
       if (options.verbose) {
@@ -77,16 +82,16 @@ export async function word2md(
       finalMarkdown = normalizeMarkdown(restoredMarkdown);
     }
 
-    // 8. Write final output
+    // 9. Write final output
     if (options.verbose) {
       console.log(chalk.blue('Writing output file...'));
     }
     await fs.writeFile(outputMd, finalMarkdown, 'utf-8');
 
-    // 9. Success
+    // 10. Success
     console.log(chalk.green(`✓ Converted ${inputDocx} → ${outputMd}`));
   } finally {
-    // 10. Cleanup temp files
+    // 11. Cleanup temp files
     if (tempMd) {
       await cleanup(tempMd);
     }

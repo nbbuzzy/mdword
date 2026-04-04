@@ -36,3 +36,15 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# User content (not tracked)
+inputs/*
+!inputs/.gitkeep
+!inputs/example-input.md
+outputs/*
+!outputs/.gitkeep
+assets/*
+!assets/.gitkeep
+!assets/diagrams/
+assets/diagrams/*
+!assets/diagrams/.gitkeep

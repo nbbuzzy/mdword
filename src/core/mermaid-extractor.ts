@@ -67,14 +67,15 @@ export async function extractMermaidDiagrams(
     // Write mermaid source to .mmd file
     await fs.writeFile(mmdPath, mermaidContent, 'utf-8');
 
-    // Get relative paths from input file
-    const inputDir = path.dirname(path.resolve(inputPath));
-    const relativePngPath = path.relative(inputDir, pngPath);
+    // Get path relative to project root (cwd) for alt text
+    // This ensures paths work regardless of where input/output files are located
+    const relativeMmdPath = path.relative(process.cwd(), mmdPath);
+    const absolutePngPath = path.resolve(pngPath);
 
-    // Create replacement: sidecar comment + image reference
-    const replacement =
-      `<!-- mermaid:${path.relative(inputDir, mmdPath)} -->\n` +
-      `![${id}](${relativePngPath})`;
+    // Create replacement: image with .mmd path in alt text
+    // Use absolute path for image so pandoc can find it from temp file location
+    // Alt text stores the .mmd path (relative to cwd) and survives round-trip through Word
+    const replacement = `![${relativeMmdPath}](${absolutePngPath})`;
 
     const diagram: ExtractedDiagram = {
       id,

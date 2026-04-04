@@ -26,8 +26,6 @@ export async function checkMermaidInstalled(): Promise<void> {
  * Render a single mermaid diagram to PNG
  */
 export async function renderSingleDiagram(diagram: ExtractedDiagram): Promise<void> {
-  await checkMermaidInstalled();
-
   // Check if PNG already exists and .mmd hasn't changed
   // For now, we'll always regenerate
   // TODO: Add timestamp comparison for optimization
@@ -67,6 +65,9 @@ export async function renderMermaidDiagrams(diagrams: ExtractedDiagram[]): Promi
   if (diagrams.length === 0) {
     return;
   }
+
+  // Check if mmdc is installed before rendering any diagrams
+  await checkMermaidInstalled();
 
   // Render diagrams sequentially to avoid overwhelming the system
   // Could be parallelized with Promise.all if needed

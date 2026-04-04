@@ -4,6 +4,17 @@ import os from 'os';
 import { randomBytes } from 'crypto';
 
 /**
+ * Create a temporary directory
+ */
+export async function createTempDir(): Promise<string> {
+  const tmpDir = os.tmpdir();
+  const randomName = `mdword-${randomBytes(8).toString('hex')}`;
+  const tempPath = path.join(tmpDir, randomName);
+  await fs.ensureDir(tempPath);
+  return tempPath;
+}
+
+/**
  * Create a temporary file with optional content and extension
  */
 export async function createTempFile(

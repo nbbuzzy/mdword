@@ -10,6 +10,7 @@ interface PandocOptions {
   format: 'docx' | 'markdown';
   referenceDoc?: string;
   extraArgs?: string[];
+  cwd?: string;  // Working directory to run pandoc from
 }
 
 /**
@@ -46,13 +47,14 @@ export async function runPandoc(options: PandocOptions): Promise<void> {
     args.push(`--reference-doc="${options.referenceDoc}"`);
   }
 
+  // For markdown output, use GFM (GitHub Flavored Markdown) for better tables and formatting
+  if (options.format === 'markdown') {
+    args.push('--to=gfm');
+    args.push('--markdown-headings=atx');
+  }
+
   // Always use --wrap=none to prevent line wrapping
   args.push('--wrap=none');
-
-  // For markdown output, use ATX headers
-  if (options.format === 'markdown') {
-    args.push('--atx-headers');
-  }
 
   // Add any extra arguments
   if (options.extraArgs) {
@@ -64,6 +66,7 @@ export async function runPandoc(options: PandocOptions): Promise<void> {
   try {
     const { stderr } = await execAsync(command, {
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      cwd: options.cwd,  // Run from specified directory
     });
 
     // Pandoc writes warnings to stderr even on success

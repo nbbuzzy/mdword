@@ -9,13 +9,13 @@ const __dirname = path.dirname(__filename);
 /**
  * Resolve the template path by walking up the directory tree
  * looking for .mdword/reference.docx
+ *
+ * Returns undefined if no template is found, allowing pandoc to use its defaults
  */
 export async function resolveTemplate(
   customPath?: string,
   startDir?: string
-): Promise<string> {
-  const searchPaths: string[] = [];
-
+): Promise<string | undefined> {
   // 1. If customPath provided, validate and return
   if (customPath) {
     const resolvedCustomPath = path.resolve(customPath);
@@ -31,7 +31,6 @@ export async function resolveTemplate(
 
   while (currentDir !== root) {
     const templatePath = path.join(currentDir, '.mdword', 'reference.docx');
-    searchPaths.push(templatePath);
 
     if (await fileExists(templatePath)) {
       return templatePath;
@@ -54,13 +53,13 @@ export async function resolveTemplate(
     return defaultTemplatePath;
   }
 
-  // If we still haven't found it, throw an error
-  searchPaths.push(defaultTemplatePath);
-  throw new TemplateNotFoundError(searchPaths);
+  // 4. No template found - return undefined to use pandoc's defaults
+  return undefined;
 }
 
 /**
  * Resolve the assets directory for diagrams
+ * Always uses project root's assets/diagrams/ for centralized diagram storage
  */
 export function resolveAssetsDir(
   customAssetsDir?: string,
@@ -70,12 +69,7 @@ export function resolveAssetsDir(
     return path.resolve(customAssetsDir);
   }
 
-  // Default to assets/diagrams relative to the input file's directory
-  if (inputFilePath) {
-    const inputDir = path.dirname(path.resolve(inputFilePath));
-    return path.join(inputDir, 'assets', 'diagrams');
-  }
-
-  // Fallback to cwd
+  // Default to assets/diagrams at the project root (cwd)
+  // This ensures all diagrams are stored in one central location
   return path.join(process.cwd(), 'assets', 'diagrams');
 }

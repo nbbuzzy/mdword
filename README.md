@@ -62,7 +62,7 @@ Options:
 
 Example:
 ```bash
-mdword md2word docs/README.md docs/README.docx --verbose
+mdword md2word inputs/README.md outputs/README.docx --verbose
 ```
 
 ### Convert Word to Markdown
@@ -78,8 +78,34 @@ Options:
 
 Example:
 ```bash
-mdword word2md docs/edited.docx docs/updated.md --verbose
+mdword word2md outputs/edited.docx inputs/updated.md --verbose
 ```
+
+## Project Structure
+
+When working with mdword, use this recommended folder structure:
+
+```
+your-project/
+├── inputs/          # Source markdown files (gitignored)
+│   └── document.md
+├── outputs/         # Generated Word documents (gitignored)
+│   └── document.docx
+├── assets/          # Auto-generated diagram files (gitignored)
+│   └── diagrams/
+│       ├── diagram-1.mmd  # Mermaid source
+│       └── diagram-1.png  # Rendered image
+└── .mdword/         # Optional: custom template
+    └── reference.docx
+```
+
+**Key points:**
+- `inputs/` - Put your source markdown files here
+- `outputs/` - Generated .docx files go here
+- `assets/diagrams/` - Automatically created by mdword for mermaid diagrams
+- `.mdword/reference.docx` - Optional custom Word template (walked up from cwd)
+
+All three directories (`inputs/`, `outputs/`, `assets/`) should be gitignored since they contain generated or user-specific content.
 
 ## How It Works
 
@@ -88,14 +114,15 @@ mdword word2md docs/edited.docx docs/updated.md --verbose
 1. **Extract Mermaid**: Parses markdown for ` ```mermaid ` blocks
 2. **Write Sidecars**: Saves each diagram to `assets/diagrams/diagram-N.mmd`
 3. **Render PNGs**: Executes `mmdc` to generate PNG images
-4. **Replace Blocks**: Inserts HTML comment markers + image references
+4. **Replace Blocks**: Inserts image with .mmd path in alt text (survives Word round-trip)
 5. **Run Pandoc**: Converts processed markdown to .docx with template styles
 
 ### word2md Workflow
 
-1. **Run Pandoc**: Converts .docx to markdown
-2. **Detect Markers**: Finds `<!-- mermaid:diagram-N.mmd -->` comments
-3. **Restore Source**: Reads .mmd files and replaces with fence blocks
+1. **Run Pandoc**: Converts .docx to markdown (with GFM output for clean tables)
+2. **Normalize HTML**: Converts `<figure>` blocks to markdown image syntax
+3. **Detect Markers**: Finds images with `.mmd` paths in alt text
+4. **Restore Source**: Reads .mmd files and replaces with fence blocks
 4. **Normalize**: Cleans up formatting (smart quotes, whitespace, headers)
 
 ### Mermaid Diagram Handling
@@ -136,9 +163,13 @@ mdword uses Word templates to control document styling. Template lookup order:
 
 1. Custom path via `--template` flag
 2. `.mdword/reference.docx` in project directory (walks up directory tree)
-3. Bundled default template
+3. Pandoc's default styles (if no template is found)
+
+**Templates are optional.** If no template is found, pandoc will use its built-in default styles, which are adequate for most use cases.
 
 ### Creating a Custom Template
+
+To customize the appearance of generated Word documents:
 
 1. Create a Word document with your desired styles (Heading 1-3, Normal, Code, Table Grid)
 2. Save as `.mdword/reference.docx` in your project root

@@ -3,14 +3,19 @@
   "version": "0.1.0",
   "description": "Bidirectional markdown ↔ Word conversion with mermaid diagram support",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "bin": {
     "mdword": "./dist/cli.js"
   },
+  "files": [
+    "dist/",
+    "templates/default-reference.docx",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "tsx watch src/cli.ts",
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "start": "node dist/cli.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -23,12 +28,26 @@
     "docx",
     "word",
     "conversion",
+    "converter",
     "mermaid",
+    "diagrams",
     "pandoc",
-    "cli"
+    "cli",
+    "round-trip",
+    "bidirectional",
+    "markdown-to-word",
+    "word-to-markdown"
   ],
-  "author": "",
+  "author": "nbbuzzy",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nbbuzzy/mdword.git"
+  },
+  "homepage": "https://github.com/nbbuzzy/mdword#readme",
+  "bugs": {
+    "url": "https://github.com/nbbuzzy/mdword/issues"
+  },
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^12.1.0",

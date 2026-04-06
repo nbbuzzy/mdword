@@ -59,7 +59,7 @@ export async function resolveTemplate(
 
 /**
  * Resolve the assets directory for diagrams
- * Always uses project root's assets/diagrams/ for centralized diagram storage
+ * Always uses project root's mdword-assets/ for centralized diagram storage
  */
 export function resolveAssetsDir(
   customAssetsDir?: string,
@@ -69,7 +69,7 @@ export function resolveAssetsDir(
     return path.resolve(customAssetsDir);
   }
 
-  // Default to assets/diagrams at the project root (cwd)
+  // Default to mdword-assets at the project root (cwd)
   // This ensures all diagrams are stored in one central location
-  return path.join(process.cwd(), 'assets', 'diagrams');
+  return path.join(process.cwd(), 'mdword-assets');
 }

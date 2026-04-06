@@ -10,27 +10,31 @@ export async function restoreMermaidDiagrams(
   markdown: string,
   baseDir: string
 ): Promise<string> {
-  // Pattern to match: ![path/to/diagram.mmd](image-path)
-  // The alt text contains the .mmd path which survives round-trip through Word
-  const mermaidPattern = /!\[([^[\]]+\.mmd)\]\([^)]+\)/g;
+  // Pattern to match: ![mermaid::path::to::diagram.mmd](image-path)
+  // The alt text contains the encoded .mmd path with :: separators
+  const mermaidPattern = /!\[(mermaid::[^[\]]+)\]\([^)]+\)/g;
 
   let restoredMarkdown = markdown;
-  const matches: Array<{ fullMatch: string; mmdPath: string; offset: number }> = [];
+  const matches: Array<{ fullMatch: string; encodedPath: string; offset: number }> = [];
 
   let match;
   while ((match = mermaidPattern.exec(markdown)) !== null) {
     matches.push({
       fullMatch: match[0],
-      mmdPath: match[1],
+      encodedPath: match[1],
       offset: match.index,
     });
   }
 
   // Process matches in reverse order to maintain correct offsets
-  for (const { fullMatch, mmdPath } of matches.reverse()) {
+  for (const { fullMatch, encodedPath } of matches.reverse()) {
+    // Decode the path: remove 'mermaid::' prefix and replace :: with /
+    // Example: mermaid::assets::diagrams::diagram-1.mmd -> assets/diagrams/diagram-1.mmd
+    const pathWithoutPrefix = encodedPath.replace(/^mermaid::/, '');
+    const decodedPath = pathWithoutPrefix.split('::').join(path.sep);
+
     // Resolve .mmd path relative to project root (cwd)
-    // Paths in alt text are stored relative to cwd, not to the file location
-    const resolvedMmdPath = path.resolve(process.cwd(), mmdPath);
+    const resolvedMmdPath = path.resolve(process.cwd(), decodedPath);
 
     try {
       // Read the .mmd file
@@ -39,10 +43,10 @@ export async function restoreMermaidDiagrams(
       // Create the fence block replacement
       const replacement = `\`\`\`mermaid\n${mermaidContent.trim()}\n\`\`\``;
 
-      // Replace the comment + image with the fence block
+      // Replace the image with the fence block
       restoredMarkdown = restoredMarkdown.replace(fullMatch, replacement);
     } catch (error) {
-      // If .mmd file doesn't exist, leave the comment/image in place
+      // If .mmd file doesn't exist, leave the image in place
       console.warn(
         chalk.yellow(`Warning: Could not read mermaid source file: ${resolvedMmdPath}`),
       );

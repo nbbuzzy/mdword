@@ -76,7 +76,7 @@ flowchart LR
 
 The Gateway forwards requests using a simple retry wrapper:
 
-```go
+```
 func forwardWithRetry(req *PaymentRequest, maxRetries int) (*PaymentResponse, error) {
     for i := 0; i < maxRetries; i++ {
         resp, err := processorClient.Send(req)

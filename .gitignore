@@ -44,6 +44,7 @@ inputs/*
 !inputs/example-input.md
 outputs/*
 !outputs/.gitkeep
+mdword-assets/
 assets/*
 !assets/.gitkeep
 !assets/diagrams/

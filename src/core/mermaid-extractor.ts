@@ -72,10 +72,15 @@ export async function extractMermaidDiagrams(
     const relativeMmdPath = path.relative(process.cwd(), mmdPath);
     const absolutePngPath = path.resolve(pngPath);
 
-    // Create replacement: image with .mmd path in alt text
+    // Encode path with :: separator to survive Word round-trip
+    // Replace / with :: and prefix with mermaid:: marker
+    // Example: assets/diagrams/diagram-1.mmd -> mermaid::assets::diagrams::diagram-1.mmd
+    const encodedPath = 'mermaid::' + relativeMmdPath.split(path.sep).join('::');
+
+    // Create replacement: image with encoded .mmd path in alt text
     // Use absolute path for image so pandoc can find it from temp file location
-    // Alt text stores the .mmd path (relative to cwd) and survives round-trip through Word
-    const replacement = `![${relativeMmdPath}](${absolutePngPath})`;
+    // Alt text stores the encoded .mmd path and survives round-trip through Word
+    const replacement = `![${encodedPath}](${absolutePngPath})`;
 
     const diagram: ExtractedDiagram = {
       id,

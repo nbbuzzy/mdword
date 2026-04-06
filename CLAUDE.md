@@ -49,13 +49,14 @@ Input DOCX → Pandoc → Restore Mermaid → Normalize → Output MD
 
 Mermaid diagrams are **never** round-tripped through Word. Instead:
 
-1. **Extraction (md2word):** Mermaid fence blocks are extracted to `.mmd` files, rendered to `.png` via `mmdc`, and replaced with HTML comment markers:
+1. **Extraction (md2word):** Mermaid fence blocks are extracted to `.mmd` files, rendered to `.png` via `mmdc`, and replaced with image references using encoded paths in alt text:
    ```markdown
-   <!-- mermaid:assets/diagrams/diagram-1.mmd -->
-   ![diagram-1](assets/diagrams/diagram-1.png)
+   ![mermaid::mdword-assets::diagram-1.mmd](mdword-assets/diagram-1.png)
    ```
 
-2. **Restoration (word2md):** HTML comments are detected, corresponding `.mmd` files are read, and fence blocks are restored:
+   The path is encoded with `::` separators instead of `/` to survive Word's round-trip without corruption.
+
+2. **Restoration (word2md):** Image alt text with `mermaid::` prefix is detected, paths are decoded by replacing `::` with `/`, corresponding `.mmd` files are read, and fence blocks are restored:
    ```markdown
    ```mermaid
    graph TD
@@ -86,9 +87,9 @@ These are thin orchestration layers that call core modules in sequence.
 ### Core Logic (`src/core/`)
 The conversion engines:
 
-- **`mermaid-extractor.ts`** - Regex-based extraction of ` ```mermaid ` blocks; writes `.mmd` files; replaces blocks with `<!-- mermaid:*.mmd -->` comments + image refs
+- **`mermaid-extractor.ts`** - Regex-based extraction of ` ```mermaid ` blocks; writes `.mmd` files; replaces blocks with image refs using `::` path encoding in alt text (e.g., `![mermaid::mdword-assets::diagram-1.mmd](...)`)
 - **`mermaid-renderer.ts`** - Spawns `mmdc` CLI to render `.mmd` → `.png`
-- **`mermaid-restorer.ts`** - Pattern matches `<!-- mermaid:*.mmd -->` comments; reads `.mmd` files; restores fence blocks
+- **`mermaid-restorer.ts`** - Pattern matches `![mermaid::*]` in alt text; decodes `::` paths back to filesystem paths; reads `.mmd` files; restores fence blocks
 - **`pandoc-runner.ts`** - Spawns `pandoc` CLI with proper args for MD↔DOCX conversion
 - **`normalizer.ts`** - Post-processes markdown to improve round-trip fidelity (smart quotes → straight quotes, heading styles, emphasis markers, etc.)
 
@@ -136,7 +137,7 @@ Conversion commands use temp files for intermediate steps (e.g., processed markd
 The extractor continues numbering from existing `.mmd` files in the assets directory. If `diagram-1.mmd` through `diagram-3.mmd` exist, the next diagram will be `diagram-4.mmd`. This prevents overwriting diagrams on re-runs.
 
 ### Assets Directory Resolution
-Default: `assets/diagrams/` relative to the input file's directory. Can be overridden with `--assets-dir` flag.
+Default: `mdword-assets/` at project root (cwd). Can be overridden with `--assets-dir` flag. The path encoding supports nested directory structures anywhere in the project (e.g., `docs/diagrams/` becomes `mermaid::docs::diagrams::diagram-1.mmd`).
 
 ## Known Round-Trip Limitations
 

@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import { createRequire } from 'module';
 import chalk from 'chalk';
 import { md2word } from './commands/md2word.js';
 import { word2md } from './commands/word2md.js';
 import { MdWordError } from './utils/errors.js';
 import { formatCliError } from './utils/cli-style.js';
+
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json');
 
 const program = new Command();
 
@@ -24,7 +28,7 @@ program
 program
   .name('mdword')
   .description('Bidirectional markdown ↔ Word conversion with mermaid diagram support')
-  .version('0.1.0');
+  .version(pkg.version);
 
 // md2word command
 program

@@ -1,7 +1,8 @@
 import fs from 'fs-extra';
 import path from 'path';
-import chalk from 'chalk';
 import { validateMarkdownInput, validateDocxOutput } from '../utils/validation.js';
+import { logConversionSuccess, logDetail, logStep } from '../utils/cli-style.js';
+import { createMd2WordProgress } from '../utils/cli-spinner.js';
 import { resolveTemplate, resolveAssetsDir } from '../utils/path-resolver.js';
 import { createTempDir, cleanup } from '../utils/file-utils.js';
 import { extractMermaidDiagrams } from '../core/mermaid-extractor.js';
@@ -23,61 +24,63 @@ export async function md2word(
   options: Md2WordOptions = {}
 ): Promise<void> {
   let tempDir: string | undefined;
+  const progress = createMd2WordProgress(!!options.verbose);
+
+  const step = (message: string) => {
+    progress.phase(message);
+    if (options.verbose) {
+      logStep(message);
+    }
+  };
 
   try {
     // 1. Validate inputs
-    if (options.verbose) {
-      console.log(chalk.blue('Validating inputs...'));
-    }
+    step('Validating inputs…');
     await validateMarkdownInput(inputMd);
     await validateDocxOutput(outputDocx);
 
     // 2. Resolve template path
-    if (options.verbose) {
-      console.log(chalk.blue('Resolving template...'));
-    }
+    step('Resolving template…');
     const templatePath = await resolveTemplate(options.template);
     if (options.verbose) {
       if (templatePath) {
-        console.log(chalk.gray(`Using template: ${templatePath}`));
+        logDetail(`Template: ${templatePath}`);
       } else {
-        console.log(chalk.gray('Using pandoc default styles (no template found)'));
+        logDetail('Using pandoc default styles (no template found)');
       }
     }
 
     // 3. Resolve assets directory
     const assetsDir = resolveAssetsDir(options.assetsDir, inputMd);
     if (options.verbose) {
-      console.log(chalk.gray(`Assets directory: ${assetsDir}`));
+      logDetail(`Assets: ${assetsDir}`);
     }
 
     // 4. Extract mermaid diagrams
-    if (options.verbose) {
-      console.log(chalk.blue('Extracting mermaid diagrams...'));
-    }
+    step('Extracting mermaid diagrams…');
     const { processedMarkdown, diagrams } = await extractMermaidDiagrams(
       inputMd,
       assetsDir
     );
     if (options.verbose && diagrams.length > 0) {
-      console.log(chalk.gray(`Found ${diagrams.length} mermaid diagram(s)`));
+      logDetail(`Found ${diagrams.length} mermaid diagram(s)`);
     }
 
     // 5. Render diagrams to PNG
     if (diagrams.length > 0) {
-      if (options.verbose) {
-        console.log(chalk.blue('Rendering mermaid diagrams to PNG...'));
-      }
+      step(
+        diagrams.length === 1
+          ? 'Rendering diagram to PNG…'
+          : `Rendering ${diagrams.length} diagrams to PNG…`
+      );
       await renderMermaidDiagrams(diagrams);
       if (options.verbose) {
-        console.log(chalk.gray(`Rendered ${diagrams.length} diagram(s)`));
+        logDetail(`Rendered ${diagrams.length} diagram(s)`);
       }
     }
 
     // 6. Create temporary directory and copy images
-    if (options.verbose) {
-      console.log(chalk.blue('Preparing temporary workspace...'));
-    }
+    step('Preparing workspace…');
     tempDir = await createTempDir();
 
     // Copy PNG files to temp directory and adjust markdown to use relative paths
@@ -99,22 +102,23 @@ export async function md2word(
     await fs.writeFile(tempMdPath, finalMarkdown, 'utf-8');
 
     // 7. Run pandoc conversion from temp directory (so it finds images)
-    if (options.verbose) {
-      console.log(chalk.blue('Running pandoc conversion...'));
-    }
+    step('Running pandoc…');
     await runPandoc({
-      input: path.basename(tempMdPath),  // Use relative path from temp dir
-      output: path.resolve(outputDocx),  // Use absolute path for output
+      input: path.basename(tempMdPath), // Use relative path from temp dir
+      output: path.resolve(outputDocx), // Use absolute path for output
       referenceDoc: templatePath,
       format: 'docx',
-      cwd: tempDir,  // Run from temp directory
+      cwd: tempDir, // Run from temp directory
     });
 
     // 8. Success
-    console.log(chalk.green(`✓ Converted ${inputMd} → ${outputDocx}`));
-    if (diagrams.length > 0) {
-      console.log(chalk.gray(`  ${diagrams.length} mermaid diagram(s) processed`));
-    }
+    progress.stop();
+    const footnotes =
+      diagrams.length > 0 ? [`${diagrams.length} mermaid diagram(s) processed`] : undefined;
+    logConversionSuccess(inputMd, outputDocx, footnotes);
+  } catch (error) {
+    progress.stop();
+    throw error;
   } finally {
     // 9. Cleanup temp directory
     if (tempDir) {

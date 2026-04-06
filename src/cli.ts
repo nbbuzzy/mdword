@@ -5,8 +5,21 @@ import chalk from 'chalk';
 import { md2word } from './commands/md2word.js';
 import { word2md } from './commands/word2md.js';
 import { MdWordError } from './utils/errors.js';
+import { formatCliError } from './utils/cli-style.js';
 
 const program = new Command();
+
+program
+  .configureOutput({
+    outputError: (str, write) => {
+      write(chalk.red(str));
+    },
+  })
+  .addHelpText(
+    'beforeAll',
+    () =>
+      `\n${chalk.bold.cyan('mdword')}  ${chalk.dim('markdown ↔ Word  ·  mermaid diagrams')}\n`,
+  );
 
 program
   .name('mdword')
@@ -50,16 +63,16 @@ program
 // Error handler
 function handleError(error: unknown): void {
   if (error instanceof MdWordError) {
-    console.error(chalk.red(`\n✗ ${error.name}: ${error.message}\n`));
+    console.error(formatCliError(error.name, error.message));
     process.exit(1);
   } else if (error instanceof Error) {
-    console.error(chalk.red(`\n✗ Error: ${error.message}\n`));
+    console.error(formatCliError('Error', error.message));
     if (process.env.DEBUG) {
-      console.error(error.stack);
+      console.error(chalk.dim(error.stack ?? ''));
     }
     process.exit(1);
   } else {
-    console.error(chalk.red('\n✗ Unknown error occurred\n'));
+    console.error(formatCliError('Error', 'Unknown error occurred'));
     process.exit(1);
   }
 }

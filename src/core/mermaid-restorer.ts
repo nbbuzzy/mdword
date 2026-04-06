@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import chalk from 'chalk';
 
 /**
  * Restore mermaid diagrams from image alt text by reading .mmd files
@@ -42,7 +43,9 @@ export async function restoreMermaidDiagrams(
       restoredMarkdown = restoredMarkdown.replace(fullMatch, replacement);
     } catch (error) {
       // If .mmd file doesn't exist, leave the comment/image in place
-      console.warn(`Warning: Could not read mermaid source file: ${resolvedMmdPath}`);
+      console.warn(
+        chalk.yellow(`Warning: Could not read mermaid source file: ${resolvedMmdPath}`),
+      );
     }
   }
 

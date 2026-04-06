@@ -89,8 +89,6 @@ func forwardWithRetry(req *PaymentRequest, maxRetries int) (*PaymentResponse, er
 }
 ```
 
----
-
 ## Notes
 
 - All inter-service communication uses **mTLS**

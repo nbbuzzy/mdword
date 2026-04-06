@@ -72,15 +72,16 @@ export async function extractMermaidDiagrams(
     const relativeMmdPath = path.relative(process.cwd(), mmdPath);
     const absolutePngPath = path.resolve(pngPath);
 
-    // Encode path with :: separator to survive Word round-trip
-    // Replace / with :: and prefix with mermaid:: marker
-    // Example: assets/diagrams/diagram-1.mmd -> mermaid::assets::diagrams::diagram-1.mmd
-    const encodedPath = 'mermaid::' + relativeMmdPath.split(path.sep).join('::');
+    // Encode path with :: separator to survive Word round-trip (no "/" corruption)
+    // Use clean encoding without prefix to avoid showing metadata in Word doc
+    // Example: mdword-assets/diagram-1.mmd -> mdword-assets::diagram-1.mmd
+    const encodedPath = relativeMmdPath.split(path.sep).join('::');
 
-    // Create replacement: image with encoded .mmd path in alt text
+    // Create replacement: image with encoded .mmd path in title attribute
     // Use absolute path for image so pandoc can find it from temp file location
-    // Alt text stores the encoded .mmd path and survives round-trip through Word
-    const replacement = `![${encodedPath}](${absolutePngPath})`;
+    // Title attribute maps to docx image description (invisible), not a visible caption
+    // On round-trip, pandoc reads the description back into alt text for the restorer
+    const replacement = `![](${absolutePngPath} "${encodedPath}")`;
 
     const diagram: ExtractedDiagram = {
       id,

@@ -49,14 +49,14 @@ Input DOCX → Pandoc → Restore Mermaid → Normalize → Output MD
 
 Mermaid diagrams are **never** round-tripped through Word. Instead:
 
-1. **Extraction (md2word):** Mermaid fence blocks are extracted to `.mmd` files, rendered to `.png` via `mmdc`, and replaced with image references using encoded paths in alt text:
+1. **Extraction (md2word):** Mermaid fence blocks are extracted to `.mmd` files, rendered to `.png` via `mmdc`, and replaced with image references using encoded paths in the title attribute (not alt text, to avoid visible metadata in Word):
    ```markdown
-   ![mermaid::mdword-assets::diagram-1.mmd](mdword-assets/diagram-1.png)
+   ![](mdword-assets/diagram-1.png "mdword-assets::diagram-1.mmd")
    ```
 
-   The path is encoded with `::` separators instead of `/` to survive Word's round-trip without corruption.
+   The path is encoded with `::` separators instead of `/` to survive Word's round-trip without corruption. The title attribute maps to the docx image description (invisible), so no metadata text appears in the Word document. On round-trip, pandoc reads the description back into alt text.
 
-2. **Restoration (word2md):** Image alt text with `mermaid::` prefix is detected, paths are decoded by replacing `::` with `/`, corresponding `.mmd` files are read, and fence blocks are restored:
+2. **Restoration (word2md):** Images with encoded `.mmd` paths (in alt text from round-trip, or in title attribute) are detected, paths are decoded by replacing `::` with `/`, corresponding `.mmd` files are read, and fence blocks are restored:
    ```markdown
    ```mermaid
    graph TD
@@ -87,9 +87,9 @@ These are thin orchestration layers that call core modules in sequence.
 ### Core Logic (`src/core/`)
 The conversion engines:
 
-- **`mermaid-extractor.ts`** - Regex-based extraction of ` ```mermaid ` blocks; writes `.mmd` files; replaces blocks with image refs using `::` path encoding in alt text (e.g., `![mermaid::mdword-assets::diagram-1.mmd](...)`)
+- **`mermaid-extractor.ts`** - Regex-based extraction of ` ```mermaid ` blocks; writes `.mmd` files; replaces blocks with image refs using `::` path encoding in the title attribute (e.g., `![](... "mdword-assets::diagram-1.mmd")`) to keep metadata invisible in Word
 - **`mermaid-renderer.ts`** - Spawns `mmdc` CLI to render `.mmd` → `.png`
-- **`mermaid-restorer.ts`** - Pattern matches `![mermaid::*]` in alt text; decodes `::` paths back to filesystem paths; reads `.mmd` files; restores fence blocks
+- **`mermaid-restorer.ts`** - Pattern matches encoded `.mmd` paths in both alt text (from docx round-trip) and title attribute; decodes `::` paths back to filesystem paths; reads `.mmd` files; restores fence blocks
 - **`pandoc-runner.ts`** - Spawns `pandoc` CLI with proper args for MD↔DOCX conversion
 - **`normalizer.ts`** - Post-processes markdown to improve round-trip fidelity (smart quotes → straight quotes, heading styles, emphasis markers, etc.)
 

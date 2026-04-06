@@ -146,14 +146,14 @@ All three directories (`inputs/`, `outputs/`, `assets/`) should be gitignored si
 1. **Extract Mermaid**: Parses markdown for ` ```mermaid ` blocks
 2. **Write Sidecars**: Saves each diagram to `assets/diagrams/diagram-N.mmd`
 3. **Render PNGs**: Executes `mmdc` to generate PNG images
-4. **Replace Blocks**: Inserts image with .mmd path in alt text (survives Word round-trip)
+4. **Replace Blocks**: Inserts image with .mmd path in title attribute (invisible in Word, survives round-trip)
 5. **Run Pandoc**: Converts processed markdown to .docx with template styles
 
 ### word2md Workflow
 
 1. **Run Pandoc**: Converts .docx to markdown (with GFM output for clean tables)
 2. **Normalize HTML**: Converts `<figure>` blocks to markdown image syntax
-3. **Detect Markers**: Finds images with `.mmd` paths in alt text
+3. **Detect Markers**: Finds images with `.mmd` paths in title/alt text
 4. **Restore Source**: Reads .mmd files and replaces with fence blocks
 4. **Normalize**: Cleans up formatting (smart quotes, whitespace, headers)
 
@@ -163,13 +163,13 @@ Mermaid diagrams are stored as **sidecar files** in `assets/diagrams/`:
 
 - `.mmd` files contain the source code (e.g., `diagram-1.mmd`)
 - `.png` files contain the rendered images (e.g., `diagram-1.png`)
-- Image alt text stores the `.mmd` path, which survives Word round-trip
+- Image title attribute stores the `.mmd` path (invisible in Word, survives round-trip)
 
 **How it works:**
 
-1. **md2word**: Extracts mermaid blocks → saves to `.mmd` → renders to `.png` → embeds image with `.mmd` path in alt text
-2. **Word preserves** the alt text in the document metadata
-3. **word2md**: Reads alt text → finds corresponding `.mmd` file → restores mermaid fence block
+1. **md2word**: Extracts mermaid blocks → saves to `.mmd` → renders to `.png` → embeds image with `.mmd` path in title attribute (not visible in Word)
+2. **Word preserves** the title in the image metadata (invisible to the reader)
+3. **word2md**: Reads title/alt text → finds corresponding `.mmd` file → restores mermaid fence block
 
 Example:
 
@@ -181,9 +181,9 @@ graph TD
 ```
 ````
 
-After md2word (internal - stored in Word document alt text):
+After md2word (internal - stored in Word document image title, invisible):
 ```markdown
-![assets/diagrams/diagram-1.mmd](assets/diagrams/diagram-1.png)
+![](assets/diagrams/diagram-1.png "assets::diagrams::diagram-1.mmd")
 ```
 
 After word2md restoration:
@@ -194,7 +194,7 @@ graph TD
 ```
 ````
 
-**Key insight**: The `.mmd` path in the image alt text is what enables round-trip fidelity. Never delete `.mmd` files if you want to convert documents back to markdown!
+**Key insight**: The `.mmd` path in the image title attribute is what enables round-trip fidelity. Never delete `.mmd` files if you want to convert documents back to markdown!
 
 ## Templates
 

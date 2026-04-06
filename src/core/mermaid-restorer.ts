@@ -10,28 +10,50 @@ export async function restoreMermaidDiagrams(
   markdown: string,
   baseDir: string
 ): Promise<string> {
-  // Pattern to match: ![mermaid::path::to::diagram.mmd](image-path)
-  // The alt text contains the encoded .mmd path with :: separators
-  const mermaidPattern = /!\[(mermaid::[^[\]]+)\]\([^)]+\)/g;
+  // Match three patterns for encoded .mmd paths:
+  // 1. Alt text pattern (from docx round-trip): ![path::to::diagram.mmd](image-path)
+  // 2. Markdown title pattern: ![](image-path "path::to::diagram.mmd")
+  // 3. HTML img tag pattern (pandoc GFM output): <img src="..." title="path::to::diagram.mmd" ... />
+  // All contain :: separators and end with .mmd
+  const altTextPattern = /!\[([^[\]]*::[^[\]]*\.mmd)\]\([^)]+\)/g;
+  const titlePattern = /!\[\]\([^)]+\s+"([^"]*::[^"]*\.mmd)"\)/g;
+  const imgTagPattern = /<img\s[^>]*?title="([^"]*::[^"]*\.mmd)"[^>]*?\/?>/g;
 
   let restoredMarkdown = markdown;
   const matches: Array<{ fullMatch: string; encodedPath: string; offset: number }> = [];
 
   let match;
-  while ((match = mermaidPattern.exec(markdown)) !== null) {
+  while ((match = altTextPattern.exec(markdown)) !== null) {
     matches.push({
       fullMatch: match[0],
       encodedPath: match[1],
       offset: match.index,
     });
   }
+  while ((match = titlePattern.exec(markdown)) !== null) {
+    if (!matches.some(m => m.offset === match!.index)) {
+      matches.push({
+        fullMatch: match[0],
+        encodedPath: match[1],
+        offset: match.index,
+      });
+    }
+  }
+  while ((match = imgTagPattern.exec(markdown)) !== null) {
+    if (!matches.some(m => m.offset === match!.index)) {
+      matches.push({
+        fullMatch: match[0],
+        encodedPath: match[1],
+        offset: match.index,
+      });
+    }
+  }
 
   // Process matches in reverse order to maintain correct offsets
   for (const { fullMatch, encodedPath } of matches.reverse()) {
-    // Decode the path: remove 'mermaid::' prefix and replace :: with /
-    // Example: mermaid::assets::diagrams::diagram-1.mmd -> assets/diagrams/diagram-1.mmd
-    const pathWithoutPrefix = encodedPath.replace(/^mermaid::/, '');
-    const decodedPath = pathWithoutPrefix.split('::').join(path.sep);
+    // Decode the path: replace :: with / (or appropriate path separator)
+    // Example: mdword-assets::diagram-1.mmd -> mdword-assets/diagram-1.mmd
+    const decodedPath = encodedPath.split('::').join(path.sep);
 
     // Resolve .mmd path relative to project root (cwd)
     const resolvedMmdPath = path.resolve(process.cwd(), decodedPath);

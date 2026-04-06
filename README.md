@@ -12,6 +12,28 @@ A two-command CLI tool that converts Markdown to `.docx` for collaborator editin
 - **Round-trip fidelity**: Designed to minimize data loss during markdown → docx → markdown conversion
 - **Smart normalization**: Cleans up smart quotes, line endings, and formatting inconsistencies
 
+## Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Link CLI globally
+npm link
+
+# Test it works
+mdword --version
+
+# Convert markdown to Word
+mdword md2word inputs/example-input.md outputs/output.docx
+
+# Convert Word back to markdown
+mdword word2md outputs/output.docx outputs/result.md
+```
+
 ## Installation
 
 ### Prerequisites
@@ -37,14 +59,24 @@ This tool requires two external dependencies:
 
 ### Install mdword
 
+**For end users** (when published to npm):
 ```bash
 npm install -g mdword
 ```
 
-Or use locally in your project:
-
+**For local development** (this repository):
 ```bash
-npm install mdword
+# 1. Install dependencies
+npm install
+
+# 2. Build the TypeScript code
+npm run build
+
+# 3. Link the CLI globally for testing
+npm link
+
+# Now 'mdword' command is available globally
+mdword --version
 ```
 
 ## Usage
@@ -57,7 +89,7 @@ mdword md2word input.md output.docx
 
 Options:
 - `-t, --template <path>` - Use custom reference.docx template
-- `-a, --assets-dir <path>` - Custom assets directory for diagrams (default: `assets/diagrams` relative to input file)
+- `-a, --assets-dir <path>` - Custom assets directory for diagrams (default: `assets/diagrams` at project root)
 - `-v, --verbose` - Enable verbose output
 
 Example:
@@ -127,11 +159,17 @@ All three directories (`inputs/`, `outputs/`, `assets/`) should be gitignored si
 
 ### Mermaid Diagram Handling
 
-Mermaid diagrams are stored as **sidecar files**:
+Mermaid diagrams are stored as **sidecar files** in `assets/diagrams/`:
 
-- `.mmd` files contain the source code
-- `.png` files contain the rendered images
-- HTML comments preserve the reference during round-trip
+- `.mmd` files contain the source code (e.g., `diagram-1.mmd`)
+- `.png` files contain the rendered images (e.g., `diagram-1.png`)
+- Image alt text stores the `.mmd` path, which survives Word round-trip
+
+**How it works:**
+
+1. **md2word**: Extracts mermaid blocks → saves to `.mmd` → renders to `.png` → embeds image with `.mmd` path in alt text
+2. **Word preserves** the alt text in the document metadata
+3. **word2md**: Reads alt text → finds corresponding `.mmd` file → restores mermaid fence block
 
 Example:
 
@@ -143,10 +181,9 @@ graph TD
 ```
 ````
 
-After md2word processing:
+After md2word (internal - stored in Word document alt text):
 ```markdown
-<!-- mermaid:assets/diagrams/diagram-1.mmd -->
-![diagram-1](assets/diagrams/diagram-1.png)
+![assets/diagrams/diagram-1.mmd](assets/diagrams/diagram-1.png)
 ```
 
 After word2md restoration:
@@ -157,15 +194,22 @@ graph TD
 ```
 ````
 
+**Key insight**: The `.mmd` path in the image alt text is what enables round-trip fidelity. Never delete `.mmd` files if you want to convert documents back to markdown!
+
 ## Templates
 
 mdword uses Word templates to control document styling. Template lookup order:
 
 1. Custom path via `--template` flag
 2. `.mdword/reference.docx` in project directory (walks up directory tree)
-3. Pandoc's default styles (if no template is found)
+3. Bundled default template at `templates/default-reference.docx` (with styled tables)
+4. Pandoc's default styles (fallback)
 
-**Templates are optional.** If no template is found, pandoc will use its built-in default styles, which are adequate for most use cases.
+The bundled default template includes:
+- Styled tables with borders and gray header rows
+- Proper heading styles (H1, H2, H3)
+- Code block formatting
+- Standard paragraph styles
 
 ### Creating a Custom Template
 
@@ -176,22 +220,6 @@ To customize the appearance of generated Word documents:
 3. mdword will automatically find and use it
 
 See `templates/README.md` for detailed instructions.
-
-## Directory Structure
-
-Recommended project layout:
-
-```
-my-project/
-├── docs/
-│   ├── my-doc.md               # Source of truth
-│   └── assets/
-│       └── diagrams/
-│           ├── diagram-1.mmd   # Mermaid source (commit to git)
-│           └── diagram-1.png   # Rendered PNG (commit or gitignore)
-└── .mdword/
-    └── reference.docx          # Word style template (commit to git)
-```
 
 ## Known Limitations
 
@@ -207,44 +235,67 @@ These are expected round-trip imperfections:
 
 ## Development
 
-### Build
+### Setup
 
 ```bash
+# Install dependencies
 npm install
+
+# Build TypeScript to JavaScript
 npm run build
+
+# Link CLI globally for testing
+npm link
 ```
 
-### Test
+### Testing the CLI
+
+**Option 1: Use npm scripts (during development)**
+```bash
+npm run md2word -- inputs/example-input.md outputs/output.docx
+npm run word2md -- outputs/output.docx outputs/result.md
+```
+
+**Option 2: Use the linked global command**
+```bash
+mdword md2word inputs/example-input.md outputs/output.docx
+mdword word2md outputs/output.docx outputs/result.md
+```
+
+### Running Tests
 
 ```bash
 npm test
 npm run test:coverage
+npm run test:watch
 ```
 
 ### Development Mode
 
+Watch for changes and rebuild automatically:
 ```bash
 npm run dev
 ```
 
-## API Usage
+### Unlink (when done)
 
-mdword can also be used programmatically:
+```bash
+npm unlink -g mdword
+```
 
-```typescript
-import { md2word, word2md } from 'mdword';
+## Publishing to npm
 
-// Convert markdown to Word
-await md2word('input.md', 'output.docx', {
-  template: '.mdword/reference.docx',
-  verbose: true,
-});
+When ready to publish:
 
-// Convert Word to markdown
-await word2md('input.docx', 'output.md', {
-  verbose: true,
-  noNormalize: false,
-});
+```bash
+# 1. Update version in package.json
+npm version patch  # or minor, or major
+
+# 2. Build
+npm run build
+
+# 3. Publish
+npm publish
 ```
 
 ## License

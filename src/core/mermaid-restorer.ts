@@ -60,7 +60,7 @@ export async function restoreMermaidDiagrams(
 
     try {
       // Read the .mmd file
-      const mermaidContent = await fs.readFile(resolvedMmdPath, 'utf-8');
+      const mermaidContent = (await fs.readFile(resolvedMmdPath, 'utf-8')).replace(/\r\n/g, '\n');
 
       // Create the fence block replacement
       const replacement = `\`\`\`mermaid\n${mermaidContent.trim()}\n\`\`\``;

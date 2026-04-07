@@ -59,7 +59,7 @@ export async function word2md(
 
     // 5. Read raw markdown
     step('Reading converted markdown…');
-    let rawMarkdown = await fs.readFile(tempMd, 'utf-8');
+    let rawMarkdown = (await fs.readFile(tempMd, 'utf-8')).replace(/\r\n/g, '\n');
 
     // 6. Pre-process: Convert HTML figures to markdown images (must happen before mermaid restoration)
     step('Converting HTML figures to markdown…');

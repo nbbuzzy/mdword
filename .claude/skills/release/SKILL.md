@@ -56,7 +56,7 @@ Run `npm test`. If tests fail, revert the version bump and stop. If there are no
 
 ### 6. Publish to npm
 
-Run `npm publish`. If it fails, DO NOT remove the commit/tag — tell the user to investigate.
+Tell the user to run `! npm publish` themselves (requires interactive 2FA). Wait for them to confirm it succeeded before continuing.
 
 ### 7. Push to GitHub
 

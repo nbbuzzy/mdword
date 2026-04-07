@@ -24,7 +24,7 @@ export async function extractMermaidDiagrams(
   assetsDir: string
 ): Promise<ExtractionResult> {
   // Read the markdown file
-  const markdown = await fs.readFile(inputPath, 'utf-8');
+  const markdown = (await fs.readFile(inputPath, 'utf-8')).replace(/\r\n/g, '\n');
 
   // Ensure assets directory exists
   await ensureDir(assetsDir);

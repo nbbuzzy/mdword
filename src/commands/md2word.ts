@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { validateMarkdownInput, validateDocxOutput } from '../utils/validation.js';
 import { logConversionSuccess, logDetail, logStep } from '../utils/cli-style.js';
-import { createMd2WordProgress } from '../utils/cli-spinner.js';
+import { createConversionProgress } from '../utils/cli-spinner.js';
 import { resolveTemplate, resolveAssetsDir } from '../utils/path-resolver.js';
 import { createTempDir, cleanup } from '../utils/file-utils.js';
 import { extractMermaidDiagrams } from '../core/mermaid-extractor.js';
@@ -24,7 +24,7 @@ export async function md2word(
   options: Md2WordOptions = {}
 ): Promise<void> {
   let tempDir: string | undefined;
-  const progress = createMd2WordProgress(!!options.verbose);
+  const progress = createConversionProgress('md2word', !!options.verbose);
 
   const step = (message: string) => {
     progress.phase(message);

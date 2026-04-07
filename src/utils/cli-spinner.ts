@@ -10,14 +10,17 @@ export interface ConversionProgress {
 /**
  * Animated loading line for long-running conversion. No-op when verbose (use log steps instead).
  */
-export function createMd2WordProgress(verbose: boolean): ConversionProgress {
+export function createConversionProgress(
+  prefix: 'md2word' | 'word2md',
+  verbose: boolean
+): ConversionProgress {
   if (verbose) {
     return { phase: () => {}, stop: () => {} };
   }
 
   const spinner: Ora = ora({
     text: 'Validating inputs…',
-    prefixText: chalk.dim('md2word'),
+    prefixText: chalk.dim(prefix),
     spinner: 'dots',
     color: 'magenta',
   }).start();

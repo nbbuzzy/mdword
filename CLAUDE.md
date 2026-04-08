@@ -150,6 +150,25 @@ These are documented imperfections users should expect:
 
 ## Testing Strategy
 
+### Manual Round-Trip Verification
+
+After making major changes, verify the full md→docx→md round-trip using the example input:
+
+```bash
+# 1. Convert markdown to Word
+npm run md2word -- inputs/example-input.md inputs/output.docx
+
+# 2. Convert back to markdown
+npm run word2md -- inputs/output.docx inputs/round-tripped.md
+
+# 3. Compare the original and round-tripped markdown
+diff inputs/example-input.md inputs/round-tripped.md
+```
+
+`inputs/example-input.md` covers tables, Mermaid diagrams, headings, lists, and inline formatting — a good smoke test for the full pipeline. Check that Mermaid blocks are restored (not left as image references) and that formatting is reasonable given the known limitations below.
+
+### Automated Tests
+
 Tests are located in `tests/` directory (structure created but not yet implemented):
 - `tests/unit/` - Unit tests for individual modules (extractors, normalizer, etc.)
 - `tests/integration/` - End-to-end command tests with real pandoc/mmdc

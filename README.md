@@ -89,7 +89,7 @@ mdword md2word input.md output.docx
 
 Options:
 - `-t, --template <path>` - Use custom reference.docx template
-- `-a, --assets-dir <path>` - Custom assets directory for diagrams (default: `assets/diagrams` at project root)
+- `-a, --assets-dir <path>` - Custom assets directory for diagrams (default: `~/.mdword/assets/<name>/`)
 - `-v, --verbose` - Enable verbose output
 
 Example:
@@ -123,28 +123,30 @@ your-project/
 │   └── document.md
 ├── outputs/         # Generated Word documents (gitignored)
 │   └── document.docx
-├── assets/          # Auto-generated diagram files (gitignored)
-│   └── diagrams/
-│       ├── diagram-1.mmd  # Mermaid source
-│       └── diagram-1.png  # Rendered image
 └── .mdword/         # Optional: custom template
     └── reference.docx
+
+~/.mdword/               # Hidden in home directory
+└── assets/
+    └── document-a1b2c3d4/   # Per-file, collision-safe
+        ├── diagram-1.mmd    # Mermaid source
+        └── diagram-1.png    # Rendered image
 ```
 
 **Key points:**
 - `inputs/` - Put your source markdown files here
 - `outputs/` - Generated .docx files go here
-- `assets/diagrams/` - Automatically created by mdword for mermaid diagrams
+- `~/.mdword/assets/` - Diagram files are stored in your home directory, isolated per input file
 - `.mdword/reference.docx` - Optional custom Word template (walked up from cwd)
 
-All three directories (`inputs/`, `outputs/`, `assets/`) should be gitignored since they contain generated or user-specific content.
+The `inputs/` and `outputs/` directories should be gitignored since they contain generated or user-specific content.
 
 ## How It Works
 
 ### md2word Workflow
 
 1. **Extract Mermaid**: Parses markdown for ` ```mermaid ` blocks
-2. **Write Sidecars**: Saves each diagram to `assets/diagrams/diagram-N.mmd`
+2. **Write Sidecars**: Saves each diagram to `~/.mdword/assets/<name>/diagram-N.mmd`
 3. **Render PNGs**: Executes `mmdc` to generate PNG images
 4. **Replace Blocks**: Inserts image with .mmd path in title attribute (invisible in Word, survives round-trip)
 5. **Run Pandoc**: Converts processed markdown to .docx with template styles
@@ -159,11 +161,11 @@ All three directories (`inputs/`, `outputs/`, `assets/`) should be gitignored si
 
 ### Mermaid Diagram Handling
 
-Mermaid diagrams are stored as **sidecar files** in `assets/diagrams/`:
+Mermaid diagrams are stored as sidecar files in `~/.mdword/assets/<name>/`:
 
 - `.mmd` files contain the source code (e.g., `diagram-1.mmd`)
 - `.png` files contain the rendered images (e.g., `diagram-1.png`)
-- Image title attribute stores the `.mmd` path (invisible in Word, survives round-trip)
+- Image title attribute stores an encoded marker (invisible in Word, survives round-trip)
 
 **How it works:**
 
@@ -183,7 +185,7 @@ graph TD
 
 After md2word (internal - stored in Word document image title, invisible):
 ```markdown
-![](assets/diagrams/diagram-1.png "assets::diagrams::diagram-1.mmd")
+![](diagram-1.png "mdword::document-a1b2c3d4::diagram-1.mmd")
 ```
 
 After word2md restoration:
@@ -194,7 +196,7 @@ graph TD
 ```
 ````
 
-**Key insight**: The `.mmd` path in the image title attribute is what enables round-trip fidelity. Never delete `.mmd` files if you want to convert documents back to markdown!
+The encoded marker in the image title is what enables round-trip fidelity. Never delete `~/.mdword/assets/` if you want to convert documents back to markdown.
 
 ## Templates
 

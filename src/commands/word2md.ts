@@ -68,7 +68,7 @@ export async function word2md(
     // 7. Restore mermaid diagrams from image alt text
     step('Restoring mermaid diagrams…');
     const baseDir = path.dirname(path.resolve(outputMd));
-    const restoredMarkdown = await restoreMermaidDiagrams(rawMarkdown, baseDir);
+    const restoredMarkdown = await restoreMermaidDiagrams(rawMarkdown, baseDir, assetsDir);
 
     // 8. Normalize output (unless disabled)
     let finalMarkdown = restoredMarkdown;

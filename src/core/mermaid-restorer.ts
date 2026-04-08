@@ -1,14 +1,20 @@
 import fs from 'fs-extra';
+import os from 'os';
 import path from 'path';
 import chalk from 'chalk';
 
 /**
  * Restore mermaid diagrams from image alt text by reading .mmd files
- * and replacing the image reference with the original fence block
+ * and replacing the image reference with the original fence block.
+ *
+ * Supports two encoding schemes:
+ * - New: mdword::diagram-1.mmd (filename resolved against assetsDir)
+ * - Legacy: path::to::diagram-1.mmd (full relative path with :: separators, resolved against cwd)
  */
 export async function restoreMermaidDiagrams(
   markdown: string,
-  baseDir: string
+  baseDir: string,
+  assetsDir?: string
 ): Promise<string> {
   // Match three patterns for encoded .mmd paths:
   // 1. Alt text pattern (from docx round-trip): ![path::to::diagram.mmd](image-path)
@@ -51,12 +57,28 @@ export async function restoreMermaidDiagrams(
 
   // Process matches in reverse order to maintain correct offsets
   for (const { fullMatch, encodedPath } of matches.reverse()) {
-    // Decode the path: replace :: with / (or appropriate path separator)
-    // Example: mdword-assets::diagram-1.mmd -> mdword-assets/diagram-1.mmd
-    const decodedPath = encodedPath.split('::').join(path.sep);
+    let resolvedMmdPath: string;
 
-    // Resolve .mmd path relative to project root (cwd)
-    const resolvedMmdPath = path.resolve(process.cwd(), decodedPath);
+    if (encodedPath.startsWith('mdword::')) {
+      // New encoding: mdword::<subdir>::diagram-1.mmd
+      // The subdir is the assets subdirectory name under ~/.mdword/assets/
+      const parts = encodedPath.slice('mdword::'.length).split('::');
+      if (parts.length >= 2) {
+        const subdir = parts[0];
+        const filename = parts.slice(1).join('::');
+        resolvedMmdPath = path.join(os.homedir(), '.mdword', 'assets', subdir, filename);
+      } else {
+        // Single part after mdword:: — fallback to assetsDir or cwd
+        const filename = parts[0];
+        resolvedMmdPath = assetsDir
+          ? path.join(assetsDir, filename)
+          : path.resolve(process.cwd(), filename);
+      }
+    } else {
+      // Legacy encoding: full relative path with :: separators
+      const decodedPath = encodedPath.split('::').join(path.sep);
+      resolvedMmdPath = path.resolve(process.cwd(), decodedPath);
+    }
 
     try {
       // Read the .mmd file

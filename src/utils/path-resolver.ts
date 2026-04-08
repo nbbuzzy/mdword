@@ -1,4 +1,6 @@
 import path from 'path';
+import os from 'os';
+import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 import { fileExists } from './file-utils.js';
 import { TemplateNotFoundError } from './errors.js';
@@ -58,8 +60,9 @@ export async function resolveTemplate(
 }
 
 /**
- * Resolve the assets directory for diagrams
- * Always uses project root's mdword-assets/ for centralized diagram storage
+ * Resolve the assets directory for diagrams.
+ * Default: ~/.mdword/assets/<hash>/ where hash is derived from the input file's
+ * absolute path. This keeps assets hidden and isolated per-file.
  */
 export function resolveAssetsDir(
   customAssetsDir?: string,
@@ -69,7 +72,20 @@ export function resolveAssetsDir(
     return path.resolve(customAssetsDir);
   }
 
-  // Default to mdword-assets at the project root (cwd)
-  // This ensures all diagrams are stored in one central location
-  return path.join(process.cwd(), 'mdword-assets');
+  // Use <stem>-<hash> as the assets subdirectory, where hash is derived from the
+  // full absolute path of the markdown file. This prevents collisions between
+  // identically-named files in different directories while staying human-readable.
+  // Example: notes-a1b2c3d4
+  const resolved = inputFilePath
+    ? path.resolve(inputFilePath)
+    : process.cwd();
+  const stem = inputFilePath
+    ? path.basename(inputFilePath, path.extname(inputFilePath))
+    : 'default';
+  const hash = createHash('sha256')
+    .update(resolved)
+    .digest('hex')
+    .slice(0, 8);
+
+  return path.join(os.homedir(), '.mdword', 'assets', `${stem}-${hash}`);
 }

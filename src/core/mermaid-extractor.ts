@@ -67,15 +67,15 @@ export async function extractMermaidDiagrams(
     // Write mermaid source to .mmd file
     await fs.writeFile(mmdPath, mermaidContent, 'utf-8');
 
-    // Get path relative to project root (cwd) for alt text
-    // This ensures paths work regardless of where input/output files are located
-    const relativeMmdPath = path.relative(process.cwd(), mmdPath);
     const absolutePngPath = path.resolve(pngPath);
 
-    // Encode path with :: separator to survive Word round-trip (no "/" corruption)
-    // Use clean encoding without prefix to avoid showing metadata in Word doc
-    // Example: mdword-assets/diagram-1.mmd -> mdword-assets::diagram-1.mmd
-    const encodedPath = relativeMmdPath.split(path.sep).join('::');
+    // Encode with mdword:: prefix, assets subdirectory name, and filename.
+    // The subdirectory name (last segment of assetsDir) lets the restorer
+    // reconstruct ~/.mdword/assets/<subdir>/<filename> without needing to
+    // know the original input path.
+    // Example: mdword::example-input::diagram-1.mmd
+    const assetsSubdir = path.basename(assetsDir);
+    const encodedPath = `mdword::${assetsSubdir}::${mmdFilename}`;
 
     // Create replacement: image with encoded .mmd path in title attribute
     // Use absolute path for image so pandoc can find it from temp file location

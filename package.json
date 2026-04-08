@@ -1,6 +1,6 @@
 {
   "name": "mdword",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Bidirectional markdown ↔ Word conversion with mermaid diagram support",
   "type": "module",
   "bin": {

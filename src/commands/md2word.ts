@@ -93,7 +93,8 @@ export async function md2word(
       await fs.copyFile(diagram.pngPath, tempPngPath);
 
       // Replace absolute path in markdown with just the filename
-      const absolutePath = path.resolve(diagram.pngPath);
+      // Normalize to forward slashes to match the extractor's encoding
+      const absolutePath = path.resolve(diagram.pngPath).split(path.sep).join('/');
       finalMarkdown = finalMarkdown.replace(absolutePath, pngFilename);
     }
 

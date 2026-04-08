@@ -67,7 +67,9 @@ export async function extractMermaidDiagrams(
     // Write mermaid source to .mmd file
     await fs.writeFile(mmdPath, mermaidContent, 'utf-8');
 
-    const absolutePngPath = path.resolve(pngPath);
+    // Normalize to forward slashes so the path is consistent in the markdown string
+    // (Windows path.resolve produces backslashes, which breaks string replacement in md2word)
+    const absolutePngPath = path.resolve(pngPath).split(path.sep).join('/');
 
     // Encode with mdword:: prefix, assets subdirectory name, and filename.
     // The subdirectory name (last segment of assetsDir) lets the restorer

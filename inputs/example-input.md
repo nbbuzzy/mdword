@@ -89,6 +89,14 @@ func forwardWithRetry(req *PaymentRequest, maxRetries int) (*PaymentResponse, er
 }
 ```
 
+## References
+
+- See the [Pandoc User's Guide](https://pandoc.org/MANUAL.html) for conversion details
+- Mermaid syntax is documented at <https://mermaid.js.org/intro/>
+- For retry patterns, refer to the [AWS Architecture Blog][aws-retry]
+
+[aws-retry]: https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
+
 ## Notes
 
 - All inter-service communication uses **mTLS**

@@ -8,8 +8,8 @@ export function normalizeMarkdown(markdown: string): string {
   normalized = normalized.replace(/[ \t]+$/gm, '');
 
   // 2. Convert smart quotes to straight quotes
-  normalized = normalized.replace(/[""]/g, '"');
-  normalized = normalized.replace(/['']/g, "'");
+  normalized = normalized.replace(/[\u201C\u201D]/g, '"');
+  normalized = normalized.replace(/[\u2018\u2019]/g, "'");
 
   // 3. Convert em-dashes and en-dashes to hyphens
   normalized = normalized.replace(/[—–]/g, '-');

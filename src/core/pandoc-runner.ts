@@ -1,8 +1,8 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { PandocError, DependencyError } from '../utils/errors.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 interface PandocOptions {
   input: string;
@@ -18,7 +18,7 @@ interface PandocOptions {
  */
 export async function checkPandocInstalled(): Promise<void> {
   try {
-    await execAsync('pandoc --version');
+    await execFileAsync('pandoc', ['--version']);
   } catch (error) {
     throw new DependencyError(
       'pandoc',
@@ -36,15 +36,15 @@ export async function runPandoc(options: PandocOptions): Promise<void> {
   // Check if pandoc is installed
   await checkPandocInstalled();
 
-  // Build command arguments
+  // Build command arguments as an array (no shell interpretation)
   const args: string[] = [
-    `"${options.input}"`,
+    options.input,
     '-o',
-    `"${options.output}"`,
+    options.output,
   ];
 
   if (options.format === 'docx' && options.referenceDoc) {
-    args.push(`--reference-doc="${options.referenceDoc}"`);
+    args.push(`--reference-doc=${options.referenceDoc}`);
   }
 
   // For markdown output, use GFM (GitHub Flavored Markdown) for better tables and formatting
@@ -61,10 +61,8 @@ export async function runPandoc(options: PandocOptions): Promise<void> {
     args.push(...options.extraArgs);
   }
 
-  const command = `pandoc ${args.join(' ')}`;
-
   try {
-    const { stderr } = await execAsync(command, {
+    const { stderr } = await execFileAsync('pandoc', args, {
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       cwd: options.cwd,  // Run from specified directory
     });

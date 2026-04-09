@@ -1,17 +1,17 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { fileExists } from '../utils/file-utils.js';
 import { MermaidRenderError, DependencyError } from '../utils/errors.js';
 import type { ExtractedDiagram } from './mermaid-extractor.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Check if mmdc (mermaid-cli) is installed
  */
 export async function checkMermaidInstalled(): Promise<void> {
   try {
-    await execAsync('mmdc --version');
+    await execFileAsync('mmdc', ['--version']);
   } catch (error) {
     throw new DependencyError(
       'mmdc',
@@ -30,10 +30,8 @@ export async function renderSingleDiagram(diagram: ExtractedDiagram): Promise<vo
   // For now, we'll always regenerate
   // TODO: Add timestamp comparison for optimization
 
-  const command = `mmdc -i "${diagram.mmdPath}" -o "${diagram.pngPath}"`;
-
   try {
-    const { stderr } = await execAsync(command, {
+    const { stderr } = await execFileAsync('mmdc', ['-i', diagram.mmdPath, '-o', diagram.pngPath], {
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
     });
 

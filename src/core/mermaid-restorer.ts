@@ -4,6 +4,17 @@ import path from 'path';
 import chalk from 'chalk';
 
 /**
+ * Validate that a resolved path stays within the expected base directory.
+ * Prevents path traversal attacks via crafted encoded paths.
+ */
+function assertWithinBoundary(resolvedPath: string, baseDir: string): void {
+  const relative = path.relative(baseDir, resolvedPath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`Path traversal detected: resolved path escapes ${baseDir}`);
+  }
+}
+
+/**
  * Restore mermaid diagrams from image alt text by reading .mmd files
  * and replacing the image reference with the original fence block.
  *
@@ -62,22 +73,26 @@ export async function restoreMermaidDiagrams(
     if (encodedPath.startsWith('mdword::')) {
       // New encoding: mdword::<subdir>::diagram-1.mmd
       // The subdir is the assets subdirectory name under ~/.mdword/assets/
+      const mdwordAssetsBase = path.join(os.homedir(), '.mdword', 'assets');
       const parts = encodedPath.slice('mdword::'.length).split('::');
       if (parts.length >= 2) {
         const subdir = parts[0];
         const filename = parts.slice(1).join('::');
-        resolvedMmdPath = path.join(os.homedir(), '.mdword', 'assets', subdir, filename);
+        resolvedMmdPath = path.join(mdwordAssetsBase, subdir, filename);
       } else {
         // Single part after mdword:: — fallback to assetsDir or cwd
         const filename = parts[0];
         resolvedMmdPath = assetsDir
           ? path.join(assetsDir, filename)
-          : path.resolve(process.cwd(), filename);
+          : path.join(mdwordAssetsBase, filename);
       }
+      assertWithinBoundary(resolvedMmdPath, mdwordAssetsBase);
     } else {
       // Legacy encoding: full relative path with :: separators
+      const legacyBase = path.join(os.homedir(), '.mdword', 'assets');
       const decodedPath = encodedPath.split('::').join(path.sep);
-      resolvedMmdPath = path.resolve(process.cwd(), decodedPath);
+      resolvedMmdPath = path.resolve(legacyBase, decodedPath);
+      assertWithinBoundary(resolvedMmdPath, legacyBase);
     }
 
     try {

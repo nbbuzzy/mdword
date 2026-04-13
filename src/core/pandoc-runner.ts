@@ -18,7 +18,7 @@ interface PandocOptions {
  */
 export async function checkPandocInstalled(): Promise<void> {
   try {
-    await execFileAsync('pandoc', ['--version']);
+    await execFileAsync('pandoc', ['--version'], { shell: process.platform === 'win32' });
   } catch (error) {
     throw new DependencyError(
       'pandoc',
@@ -65,6 +65,7 @@ export async function runPandoc(options: PandocOptions): Promise<void> {
     const { stderr } = await execFileAsync('pandoc', args, {
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       cwd: options.cwd,  // Run from specified directory
+      shell: process.platform === 'win32',
     });
 
     // Pandoc writes warnings to stderr even on success

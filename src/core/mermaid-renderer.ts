@@ -11,7 +11,7 @@ const execFileAsync = promisify(execFile);
  */
 export async function checkMermaidInstalled(): Promise<void> {
   try {
-    await execFileAsync('mmdc', ['--version']);
+    await execFileAsync('mmdc', ['--version'], { shell: process.platform === 'win32' });
   } catch (error) {
     throw new DependencyError(
       'mmdc',
@@ -33,6 +33,7 @@ export async function renderSingleDiagram(diagram: ExtractedDiagram): Promise<vo
   try {
     const { stderr } = await execFileAsync('mmdc', ['-i', diagram.mmdPath, '-o', diagram.pngPath], {
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      shell: process.platform === 'win32',
     });
 
     // Check if PNG was actually created
